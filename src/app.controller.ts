@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { SBClientProxyService } from './sb-client-proxy/sb-client-proxy.service';
+import { SBClientProxyService } from './sb-client-proxy';
 
 @Controller()
 export class AppController {

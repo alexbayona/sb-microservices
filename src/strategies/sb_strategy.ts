@@ -1,29 +1,53 @@
 /* eslint-disable prettier/prettier */
 import { CustomTransportStrategy, Server } from '@nestjs/microservices';
-import { ServiceBusClient } from '@azure/service-bus';
+import {
+  MessageHandlers,
+  ProcessErrorArgs,
+  ServiceBusClient,
+  ServiceBusReceivedMessage,
+  ServiceBusReceiver,
+} from '@azure/service-bus';
 
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-export default class AzureServiceBusServer extends Server implements CustomTransportStrategy {
-    constructor(private client: ServiceBusClient) {
-        super();
-    }
+export class AzureServiceBusServer
+  extends Server
+  implements CustomTransportStrategy
+{
+  constructor(private client: ServiceBusClient) {
+    super();
+  }
 
-    listen(callback: () => void) {
+  listen(callback: () => void) {
+    this.messageHandlers.forEach(async (handler, pattern) => {
+      const queueReceiver = this.client.createReceiver(pattern);
 
-        this.messageHandlers.forEach(async (handler, pattern) => {
-            const queueReceiver = this.client.createReceiver(pattern);
+      const messageHandlers: MessageHandlers = {
+        processMessage: async function (
+          message: ServiceBusReceivedMessage,
+        ): Promise<void> {
+          // This method completes the message so that it is removed from the queue.
+          await queueReceiver.completeMessage(message);
 
-            const messages = await queueReceiver.receiveMessages(10);
+          handler(message);
+        },
+        processError: function (args: ProcessErrorArgs): Promise<void> {
+          return new Promise<void>(() => {
+            // In this code, we can add a logging mechanism to save the error
+            console.error(`Error processing message: ${args.error}`);
+          });
+        },
+      };
 
-            handler(messages);
-        });
+      // This method starts the message pump.
+      queueReceiver.subscribe(messageHandlers);
+    });
 
-        callback();
-    }
+    callback();
+  }
 
-    async close() {
-        await this.client.close();
-    }
+  async close() {
+    await this.client.close();
+  }
 }

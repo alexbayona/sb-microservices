@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions } from '@nestjs/microservices';
+import { AzureServiceBusServer } from 'src/strategies';
 import { AppModule } from './app.module';
 
 import { SBClientProvider } from './sb-client-proxy/sb-client.provider';
-import AzureServiceBusServer from './strategies/sb_strategy';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
